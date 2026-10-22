@@ -1,7 +1,7 @@
 from pyspark import pipelines as dp
 from pyspark.sql import functions as f
 from pyspark.sql.window import Window
-from functools import reduce
+
 
 
 # Model 1: gold_monthly_channel_gmv (Pytanie 1: GMV i średnia wartość zamówienia per kanał i miesiąc)
