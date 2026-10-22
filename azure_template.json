@@ -1,0 +1,201 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspaces_retailflow_workspace_name": {
+            "defaultValue": "retailflow-workspace",
+            "type": "String"
+        },
+        "storageAccounts_retailflow21102026_name": {
+            "defaultValue": "retailflow21102026",
+            "type": "String"
+        },
+        "accessConnectors_retailflow_access_connector_name": {
+            "defaultValue": "retailflow-access_connector",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Databricks/accessConnectors",
+            "apiVersion": "2026-01-01",
+            "name": "[parameters('accessConnectors_retailflow_access_connector_name')]",
+            "location": "westeurope",
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {}
+        },
+        {
+            "type": "Microsoft.Databricks/workspaces",
+            "apiVersion": "2026-01-01",
+            "name": "[parameters('workspaces_retailflow_workspace_name')]",
+            "location": "westeurope",
+            "sku": {
+                "name": "premium"
+            },
+            "properties": {
+                "computeMode": "Serverless",
+                "publicNetworkAccess": "Enabled",
+                "authorizations": [
+                    {
+                        "principalId": "9a74af6f-d153-4348-988a-e2672920bee9",
+                        "roleDefinitionId": "8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
+                    }
+                ],
+                "createdBy": {},
+                "updatedBy": {}
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2026-06-01",
+            "name": "[parameters('storageAccounts_retailflow21102026_name')]",
+            "location": "polandcentral",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "allowCrossTenantDelegationSas": false,
+                "dualStackEndpointPreference": {
+                    "publishIpv6Endpoint": false
+                },
+                "dnsEndpointType": "Standard",
+                "defaultToOAuthAuthentication": false,
+                "publicNetworkAccess": "Enabled",
+                "allowCrossTenantReplication": false,
+                "isSftpEnabled": false,
+                "minimumTlsVersion": "TLS1_2",
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": true,
+                "isHnsEnabled": true,
+                "networkAcls": {
+                    "ipv6Rules": [],
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [],
+                    "ipRules": [],
+                    "defaultAction": "Allow"
+                },
+                "supportsHttpsTrafficOnly": true,
+                "encryption": {
+                    "requireInfrastructureEncryption": false,
+                    "services": {
+                        "file": {
+                            "keyType": "Account",
+                            "enabled": true
+                        },
+                        "blob": {
+                            "keyType": "Account",
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                },
+                "accessTier": "Hot"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices",
+            "apiVersion": "2026-06-01",
+            "name": "[concat(parameters('storageAccounts_retailflow21102026_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_retailflow21102026_name'))]"
+            ],
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "properties": {
+                "staticWebsite": {
+                    "enabled": false
+                },
+                "containerDeleteRetentionPolicy": {
+                    "enabled": true,
+                    "days": 7
+                },
+                "cors": {
+                    "corsRules": []
+                },
+                "deleteRetentionPolicy": {
+                    "allowPermanentDelete": false,
+                    "enabled": true,
+                    "days": 7
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices",
+            "apiVersion": "2026-06-01",
+            "name": "[concat(parameters('storageAccounts_retailflow21102026_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_retailflow21102026_name'))]"
+            ],
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "properties": {
+                "protocolSettings": {
+                    "smb": {
+                        "encryptionInTransit": {
+                            "required": true
+                        }
+                    }
+                },
+                "cors": {
+                    "corsRules": []
+                },
+                "shareDeleteRetentionPolicy": {
+                    "enabled": true,
+                    "days": 7
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/queueServices",
+            "apiVersion": "2026-06-01",
+            "name": "[concat(parameters('storageAccounts_retailflow21102026_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_retailflow21102026_name'))]"
+            ],
+            "properties": {
+                "cors": {
+                    "corsRules": []
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/tableServices",
+            "apiVersion": "2026-06-01",
+            "name": "[concat(parameters('storageAccounts_retailflow21102026_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_retailflow21102026_name'))]"
+            ],
+            "properties": {
+                "cors": {
+                    "corsRules": []
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2026-06-01",
+            "name": "[concat(parameters('storageAccounts_retailflow21102026_name'), '/default/retailflow')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_retailflow21102026_name'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_retailflow21102026_name'))]"
+            ],
+            "properties": {
+                "immutableStorageWithVersioning": {
+                    "enabled": false
+                },
+                "defaultEncryptionScope": "$account-encryption-key",
+                "denyEncryptionScopeOverride": false,
+                "publicAccess": "None"
+            }
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+  "pipeline_type": "WORKSPACE",
+  "name": "retail_pipeline",
+  "libraries": [
+    {
+      "glob": {
+        "include": "src/bronze_layer.py"
+      }
+    },
+    {
+      "glob": {
+        "include": "src/silver_layer.py"
+      }
+    },
+    {
+      "glob": {
+        "include": "src/gold_layer.py"
+      }
+    }
+  ],
+  "schema": "default",
+  "continuous": false,
+  "development": false,
+  "photon": true,
+  "channel": "CURRENT",
+  "catalog": "retailflow_workspace",
+  "serverless": true
+}
