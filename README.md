@@ -2,19 +2,19 @@
 
 Projekt potoku danych zbudowany w architekturze **Medallion (Bronze → Silver → Gold)** na platformie **Azure Databricks**. Głównym celem było zamodelowanie realnego przepływu danych dla firmy e-commerce/retail: od wczytania „brudnych” plików CSV z chmury Azure, przez automatyczne czyszczenie i walidację jakości danych, aż po gotowe tabele analityczne (Data Marts) odpowiadające na konkretne pytania biznesowe.
 
-Całość została napisana z użyciem nowego API **Spark Declarative Pipelines (`pyspark.pipelines`)** i osadzona w **Unity Catalog**.
+Całość została napisana z użyciem **Spark Declarative Pipelines (`pyspark.pipelines`)** i osadzona w **Unity Catalog**.
 
 ---
 
 ## O co chodzi w projekcie? (Kontekst biznesowy)
 
-Dane spływają do jeziora danych (ADLS Gen2) z 4 różnych systemów: CRM (`customers`), ERP (`products`), systemu zamówień (`orders`, `order_items`, `stores`) oraz systemu zwrotów (`returns`). 
+Dane spływają do data lake (ADLS Gen2) z 4 różnych systemów: CRM (`customers`), ERP (`products`), systemu zamówień (`orders`, `order_items`, `stores`) oraz systemu zwrotów (`returns`). 
 
 Jak to często bywa w danych produkcyjnych, pliki źródłowe zawierały sporo błędów:
 * różne formaty zapisu dat w jednej kolumnie (np. `yyyy-MM-dd`, `dd.MM.yyyy`, `MM/dd/yyyy`),
 * błędne wartości liczbowe (ujemne ceny, wartości zastępcze typu `999999`),
 * brakujące klucze główne i puste stringi udające wartości (`"null"`, `"nan"`, `""`),
-* anomalie logiczne (np. data dostawy wcześniejsza niż data zamówienia, zamówienia online przypisane do nieistniejącego sklepu `store_id = 999`).
+* anomalie logiczne (np. data dostawy wcześniejsza niż data zamówienia).
 
 Zamiast czyścić to ręcznie w notebookach, zbudowałem deklaratywny pipeline, który sam wychwytuje błędy, raportuje metryki jakości danych i przepuszcza do warstwy analitycznej tylko zweryfikowane rekordy.
 
@@ -59,6 +59,15 @@ Tutaj dzieje się całe czyszczenie danych i wymuszanie typów:
 
 ### 4. Warstwa Gold (`src/gold_layer.py`)
 * Zestaw 5 zmaterializowanych widoków (`@dp.materialized_view`) zasilanych czystymi danymi z warstwy Silver.
+
+---
+
+## Decyzje projektowe (Dlaczego tak to rozwiązałem?)
+
+* **Kiedy Streaming Tables, a kiedy Materialized Views:** Tabele z transakcjami (`orders`, `order_items`, `returns`) cały czas rosną, dlatego w warstwach Bronze i Silver użyłem *Streaming Tables* oraz Auto Loadera (`cloudFiles`). Dzięki temu przy kolejnych uruchomieniach potok dogrywa tylko nowe pliki z Azure, zamiast za każdym razem mielić całą historię od nowa. Z kolei mniejsze tabele słownikowe (`customers`, `products`, `stores`) i raporty w warstwie Gold zrobiłem jako *Materialized Views*, bo wymagają przeliczenia całości (np. grupowania i funkcji okna), o co Databricks dba już automatycznie.
+* **Odrzucanie rekordów (`expect_or_drop`) vs. samo logowanie błędów (`expect_all`):** Wiersze bez klucza głównego (np. brak `order_id` czy `customer_id`) od razu wyrzucam z potoku za pomocą `@dp.expect_or_drop`, bo i tak nie da się ich z niczym połączyć w `JOIN`-ach i psułyby wyniki. Natomiast błędy w pojedynczych kolumnach (np. brak telefonu, dziwna data dostawy czy za duży rabat) sprawdzam przez `@dp.expect_all`. Zamiast usuwać cały wiersz, zamieniam tylko błędną wartość na `NULL` i puszczam rekord dalej. Gdybym wyrzucał całe zamówienie przez zły format maila albo brak numeru telefonu, sztucznie zaniżyłbym przychody (GMV) w warstwie Gold.
+* **Naprawa danych tam, gdzie to możliwe, zamiast ich usuwania:** W zamówieniach z kanałów `Web` i `Mobile` często pojawiał się nieistniejący sklep (`store_id = 999`) albo puste pole. Zamiast traktować te zamówienia jako błędne, dodałem w warstwie Silver prostą regułę, która przypisuje je do sklepu internetowego (`store_id = 105`). Dzięki temu zachowałem pełną sprzedaż online i poprawne powiązanie z tabelą sklepów.
+* **Tabele zarządzane (Managed Tables) w Unity Catalog:** Surowe pliki CSV wpadają na moje konto ADLS Gen2 (podpięte bezpiecznie przez *External Location* i *Managed Identity*, bez wpisywania kluczy w kodzie), ale gotowe tabele w Bronze, Silver i Gold zostawiłem jako *Managed Tables* w Unity Catalog (`retailflow_workspace`). Nie musiałem przez to ręcznie zarządzać folderami pod pliki Parquet na Azure, a Databricks sam pilnuje porządku w plikach i optymalizacji tabel.
 
 ---
 
