@@ -1,0 +1,6 @@
+store_id,store_name,city,region,opened_date,is_active,store_type
+101,Sklep Centrum,Warszawa,Mazowieckie,2015-03-01,1,flagship
+102,Sklep Galeria,Kraków,Malopolskie,2016-09-15,1,mall
+103,Sklep Gdańsk,Gdansk,Pomorskie,2017-05-20,1,mall
+104,,Wrocław,Dolnośląskie,01/11/2018,0,outlet
+105,Sklep Online,,,2020-01-01,1,online
